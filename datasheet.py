@@ -77,3 +77,46 @@ sig_WLS_upg_light = sig_mDOM_upg_light[0] * WLS2_mDOM_ratio
 
 # total noise rate for IceCube Upgrade in WLS tubes with 1-fold conincidence
 f_noise_WLS_upg = (f_noise_WLS_dark + f_noise_WLS_radio) * 2 * number_of_modules_upg
+
+def allocator(sensor_type, update_type, SN_type, noise_type):
+    if sensor_type == 'mDOM':
+        number_of_PMTs = number_of_PMTs_per_mDOM
+        if update_type == 'Gen2':
+            noise_rate = f_noise_mDOM_gen2
+            if SN_type == 'heavy':
+                signal_events = sig_mDOM_gen2_heavy
+            elif SN_type == 'light':
+                signal_events = sig_mDOM_gen2_light
+        elif update_type == 'Update':
+            if SN_type == 'heavy':
+                signal_events = sig_mDOM_upg_heavy
+            elif SN_type == 'light':
+                signal_events = sig_mDOM_upg_heavy
+            if noise_type == 'noisy':
+                noise_rate = f_noise_mDOM_upg_noisy
+            elif SN_type == 'quiet':
+                noise_rate = f_noise_mDOM_upg_quiet
+    elif sensor_type == 'WLS':
+        number_of_PMTs = 1
+        if update_type == 'Gen2':
+            noise_rate = f_noise_WLS_gen2
+            if SN_type == 'heavy':
+                signal_events = sig_WLS_gen2_heavy
+            elif SN_type == 'light':
+                signal_events = sig_WLS_gen2_light
+        elif update_type == 'Update':
+            noise_rate = f_noise_WLS_upg
+            if SN_type == 'heavy':
+                signal_events = sig_WLS_upg_heavy
+            elif SN_type == 'light':
+                signal_events = sig_WLS_upg_light
+    elif sensor_type == 'LOM18':
+        number_of_PMTs = 18
+        signal_events = None
+        noise_rate = None
+    elif sensor_type == 'LOM16':
+        number_of_PMTs = 16
+        signal_events = None
+        noise_rate = None
+
+    return number_of_PMTs, signal_events, noise_rate

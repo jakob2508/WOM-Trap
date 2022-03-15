@@ -2,12 +2,11 @@ import numpy as np
 from scipy import special
 import math
 from scipy.optimize import minimize
+from scipy.stats import poisson
 
-def cumulative_poissonian(m, l):
-    s = 0
-    for k in range(m+1):
-        s = s + l**k * np.exp(-l) / math.factorial(k)
-    return s
+def cumulative_poissonian(k, mu):
+    dist = poisson(mu)
+    return dist.cdf(k)
 
 def stouffer(z, u):
     z_tot = np.sum(z)/np.sqrt(np.sum(u))
