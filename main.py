@@ -1,38 +1,14 @@
 from sensors import *
-
+from scipy.optimize import brute
 #### LOGICAL AND ####
+from AND import *
 
-def AND_detection_probability(distance):
-    return mDOM.detection_probability(distance) * wls.detection_probability(distance)
+fit_weight = 1E-6
+DES_false_alarm_rate = 0.01 # disired total false alarm rate
+slices = (slice(7,8,1), slice(2,10,1))
 
-def AND_false_detection_probability():
-    return mDOM.false_detection_probability() * wls.false_detection_probability()
+res = brute(AND_optimise, ranges = slices, disp=True, finish=None, full_output=True)
 
-def AND_significance(distance):
-    AND_detection_probability = mDOM.detection_probability(distance)*wls.detection_probability(distance)
-    return probability_to_significance(AND_detection_probability)
-
-def AND_detection_horizon():
-    thresh = 1E-3
-    f = lambda x: ((mDOM.detection_probability(x)*wls.detection_probability(x))-0.5)**2
-    loss = 1
-    x0 = 1
-    while loss > thresh:
-        res = minimize(f, x0 = x0, method='Nelder-Mead', tol = 1E-6)
-        loss = (AND_detection_probability(res.x.item())-0.5)**2
-        x0 += 50
-        if x0 > 1E4:
-            break
-    return res.x.item()
-
-def AND_noise_rate():
-    return mDOM.noise_rate * wls.noise_rate
-
-def AND_false_alarm_rate():
-    return AND_false_detection_probability() * AND_noise_rate() * year
-
-mDOM = MDOM('mDOM', 7, 7)
-wls = WLS('WLS')
 
 '''
 def AND(trigger_number_of_PMTs, trigger_number_of_modules,distance):
