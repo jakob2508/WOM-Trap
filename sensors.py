@@ -1,6 +1,8 @@
 import numpy as np
+import globals
 from datasheet import *
 from stat_functions import *
+from scipy.optimize import minimize
 
 class Sensor(object):
     def __init__(self, name, sensor_type, update_type = 'Gen2', SN_type = 'heavy', noise_type = None):
@@ -92,20 +94,72 @@ class WLS(Sensor):
                 break
         return res.x.item()
    
-class AND(MDOM, WLS):
+class AND(object):
     def __init__(self, MDOM_name, WLS_name, trigger_number_of_PMTs, trigger_number_of_modules, MDOM_sensor_type = 'mDOM', WLS_sensor_type = 'WLS', update_type = 'Gen2', SN_type = 'heavy', noise_type = None):
+        
+        mdom = MDOM(MDOM_name, trigger_number_of_PMTs, trigger_number_of_modules, MDOM_sensor_type, update_type, SN_type, noise_type)
+        wls = WLS(WLS_name, WLS_sensor_type, update_type, SN_type, noise_type)
 
-        MDOM.__init__(self, MDOM_name, trigger_number_of_PMTs, trigger_number_of_modules, MDOM_sensor_type, update_type, SN_type, noise_type)
-        WLS.__init__(self, WLS_name, WLS_sensor_type, update_type, SN_type, noise_type)
+        self.MDOM = mdom
+        self.WLS = wls 
 
-    def AND_detection_probability(self, distance):
-        return MDOM.detection_probability(distance) * WLS.detection_probability(distance)
+    @property
+    def noise_rate(self):
+        return self.MDOM.noise_rate + self.WLS.noise_rate
 
-    def AND_false_detection_probability(self):
-        return MDOM.false_detection_probability()*WLS.false_detection_probability()
+    def detection_probability(self, distance):
+        return self.MDOM.detection_probability(distance) * self.WLS.detection_probability(distance)
 
-    def AND_false_alarm_rate(self):
-        return self.AND_false_alarm_rate*(MDOM.noise_rate*WLS.noise_rate)*year
+    def false_detection_probability(self):
+        wls_false_detection_probability = np.sqrt(self.noise_rate/(globals.DES_false_alarm_rate*year))
+        return self.MDOM.false_detection_probability() * wls_false_detection_probability
 
-    def AND_significance(self, distance):
-        return probability_to_significance(self.AND_detection_probability(distance))
+    def false_alarm_rate(self):
+        return self.false_detection_probability() * self.noise_rate * year
+
+    def significance(self, distance):
+        return probability_to_significance(self.detection_probability(distance))
+
+    def detection_horizon(self):
+        thresh = 1E-3
+        f = lambda x: ((self.MDOM.detection_probability(x)*self.WLS.detection_probability(x))-0.5)**2
+        loss = 1
+        x0 = 1
+        while loss > thresh:
+            res = minimize(f, x0 = x0, method='Nelder-Mead', tol = 1E-6)
+            loss = (self.detection_probability(res.x.item())-0.5)**2
+            x0 += 50
+            if x0 > 1E4:
+                break
+        return res.x.item()
+
+class OR(object):
+    def __init__(self, MDOM_name, WLS_name, trigger_number_of_PMTs, trigger_number_of_modules, MDOM_sensor_type = 'mDOM', WLS_sensor_type = 'WLS', update_type = 'Gen2', SN_type = 'heavy', noise_type = None):
+        
+        mdom = MDOM(MDOM_name, trigger_number_of_PMTs, trigger_number_of_modules, MDOM_sensor_type, update_type, SN_type, noise_type)
+        wls = WLS(WLS_name, WLS_sensor_type, update_type, SN_type, noise_type)
+
+        self.MDOM = mdom
+        self.WLS = wls 
+
+    def significance(self, distance):
+        return stouffer([self.MDOM.significance(distance), self.WLS.significance(distance)], [1,1])
+
+    def detection_probability(self, distance):
+        return significance_to_probability(self.significance(distance))
+
+    def false_alarm_rate(self):
+        return self.MDOM.false_alarm_rate() * self.WLS.false_alarm_rate()
+
+    def detection_horizon(self):
+        thresh = 1E-3
+        f = lambda x: (significance_to_probability(self.significance(x))-0.5)**2
+        loss = 1
+        x0 = 1
+        while loss > thresh:
+            res = minimize(f, x0 = x0, method='Nelder-Mead', tol = 1E-6)
+            loss = (self.detection_probability(res.x.item())-0.5)**2
+            x0 += 50
+            if x0 > 1E4:
+                break
+        return res.x.item()

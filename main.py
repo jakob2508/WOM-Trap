@@ -1,13 +1,27 @@
+import globals
 from sensors import *
 from scipy.optimize import brute
-#### LOGICAL AND ####
-from AND import *
 
-fit_weight = 1E-6
-DES_false_alarm_rate = 0.01 # disired total false alarm rate
-slices = (slice(7,8,1), slice(2,10,1))
+def AND_optimise(input):
+    trigger_number_of_PMTs, trigger_number_of_modules = input
+    log_and = AND('mDOM', 'wls', trigger_number_of_PMTs, trigger_number_of_modules)
 
-res = brute(AND_optimise, ranges = slices, disp=True, finish=None, full_output=True)
+    return np.sqrt((1/log_and.detection_horizon())**2 + globals.fit_weight * (log_and.false_alarm_rate() - globals.DES_false_alarm_rate)**2)
+
+def OR_optimise(input):
+    trigger_number_of_PMTs, trigger_number_of_modules = input
+    log_and = OR('mDOM', 'wls', trigger_number_of_PMTs, trigger_number_of_modules)
+
+    return np.sqrt((1/log_and.detection_horizon())**2 + globals.fit_weight * (log_and.false_alarm_rate() - globals.DES_false_alarm_rate)**2)
+
+if __name__ == "__main__": 
+    globals.initialize()
+
+    print(globals.fit_weight)
+
+    slices = (slice(7,8,1), slice(2,20,1))
+
+    res = brute(OR_optimise, ranges = slices, disp=True, finish=None, full_output=True)
 
 
 '''
