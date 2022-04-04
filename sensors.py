@@ -75,8 +75,8 @@ class WLS(Sensor):
     def detection_probability(self, distance):
         return significance_to_probability(self.significance(distance))
 
-    def false_detection_probability(self, distance):
-        return 1 - self.detection_probability(self, distance)
+    def false_detection_probability(self):
+        return globals.DES_false_alarm_rate_WLS/(year*self.noise_rate)
 
     def false_alarm_rate(self):
         return self.false_detection_probability()*year*self.noise_rate
@@ -111,7 +111,7 @@ class AND(object):
         return self.MDOM.detection_probability(distance) * self.WLS.detection_probability(distance)
 
     def false_detection_probability(self):
-        wls_false_detection_probability = np.sqrt(self.noise_rate/(globals.DES_false_alarm_rate*year))
+        wls_false_detection_probability = np.sqrt(globals.DES_false_alarm_rate_comb/(year*self.noise_rate))
         return self.MDOM.false_detection_probability() * wls_false_detection_probability
 
     def false_alarm_rate(self):
@@ -122,7 +122,7 @@ class AND(object):
 
     def detection_horizon(self):
         thresh = 1E-3
-        f = lambda x: ((self.MDOM.detection_probability(x)*self.WLS.detection_probability(x))-0.5)**2
+        f = lambda x: (self.detection_probability(x)-0.5)**2
         loss = 1
         x0 = 1
         while loss > thresh:
@@ -149,13 +149,13 @@ class OR(object):
         return significance_to_probability(self.significance(distance))
 
     def false_alarm_rate(self):
-        return self.MDOM.false_alarm_rate() * self.WLS.false_alarm_rate()
+        return self.MDOM.false_alarm_rate() + self.WLS.false_alarm_rate()
 
     def detection_horizon(self):
         thresh = 1E-3
-        f = lambda x: (significance_to_probability(self.significance(x))-0.5)**2
+        f = lambda x: (self.detection_probability(x)-0.5)**2
         loss = 1
-        x0 = 1
+        x0 = 1400
         while loss > thresh:
             res = minimize(f, x0 = x0, method='Nelder-Mead', tol = 1E-6)
             loss = (self.detection_probability(res.x.item())-0.5)**2

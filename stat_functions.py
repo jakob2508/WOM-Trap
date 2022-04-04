@@ -60,10 +60,10 @@ def stouffer(significances, widths):
     ---------
     >>> stouffer([10,5],[1,1])                          #doctest: +SKIP
     10.606601717798211
-    >>> stouffer([1,4],[1,0.5])                         #doctest: +SKIP
-    4.08248290463863
+    >>> stouffer([1,4,2],[1,0.5,0.25])                  #doctest: +SKIP
+    6.110100926607787
     '''
-    combined_significance = np.sum(significances)/np.sqrt(np.sum(widths**2))
+    combined_significance = np.sum(significances)/np.sqrt(np.sum(np.square(widths)))
     return combined_significance
     
 
@@ -75,12 +75,12 @@ def significance_to_probability(significance):
 
     Parameters:
     -----------
-    significances : float
+    significances : float or array of floats
     significance in multiples of the Gaussian standard deviation
 
     Returns:
     --------
-    probability : float
+    probability : float or array of floats
     probability (p-value)
 
     Examples:
@@ -111,12 +111,12 @@ def probability_to_significance(probability):
 
     Parameters:
     -----------
-    probability : float
+    probability : float or array of floats
     probability (p-value)
 
     Returns:
     --------
-    significances : float
+    significances : float or array of floats
     significance in multiples of the Gaussian standard deviation
 
     See Also:
