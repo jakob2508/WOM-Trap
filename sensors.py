@@ -76,7 +76,8 @@ class WLS(Sensor):
         return significance_to_probability(self.significance(distance))
 
     def false_detection_probability(self):
-        return globals.DES_false_alarm_rate_WLS/(year*self.noise_rate)
+        #return globals.DES_false_alarm_rate_wls/(year*self.noise_rate)
+        return np.sqrt(globals.DES_false_alarm_rate_comb)/(year*self.noise_rate)
 
     def false_alarm_rate(self):
         return self.false_detection_probability()*year*self.noise_rate
@@ -143,13 +144,14 @@ class OR(object):
         self.WLS = wls 
 
     def significance(self, distance):
-        return stouffer([self.MDOM.significance(distance), self.WLS.significance(distance)], [1,1])
+        #return stouffer([self.MDOM.significance(distance), self.WLS.significance(distance)], [1,1])
+        return stouffer([self.MDOM.significance(distance), 0], [1,0])
 
     def detection_probability(self, distance):
         return significance_to_probability(self.significance(distance))
 
     def false_alarm_rate(self):
-        return self.MDOM.false_alarm_rate() + self.WLS.false_alarm_rate()
+        return self.MDOM.false_alarm_rate()# + self.WLS.false_alarm_rate()
 
     def detection_horizon(self):
         thresh = 1E-3
