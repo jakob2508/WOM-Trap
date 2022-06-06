@@ -2,6 +2,7 @@ import numpy as np
 from scipy import special
 from scipy.optimize import minimize
 from scipy.stats import poisson
+from scipy.stats import norm
 
 def cumulative_poissonian(k, mu):
     '''
@@ -67,21 +68,48 @@ def stouffer(significances, widths):
     return combined_significance
     
 
-def significance_to_probability(significance):
+def probability_to_significance(probability, type="two-sided"):
     '''
-    Transforms significance into probability.
+    Transforms p-value into Z-score.
 
-    Returns the probability (p-value) for a given significance assuming a Gaussian distribution. Calculates the cumulative probability density function in the interval from -significance to +significance.
+    Returns the Z-score for a given p-value assuming a Gaussian distribution. One-sided and two-sided tails allowed.
 
     Parameters:
     -----------
-    significances : float or array of floats
-    significance in multiples of the Gaussian standard deviation
+    p-value : float or array of floats
 
     Returns:
     --------
-    probability : float or array of floats
-    probability (p-value)
+    Z-score : float or array of floats
+
+    Examples:
+    ---------
+    >>>  probability_to_significance(0.68)              #doctest: +SKIP
+    0.9944578832097535
+    >>>  probability_to_significance(0.95)              #doctest: +SKIP
+    1.959963984540054          
+    >>>  probability_to_significance(0.995)             #doctest: +SKIP
+    2.807033768343811
+    '''
+    if type == "one-sided":
+        significance = norm.ppf(probability)
+    elif type == "two-sided":
+        significance = norm.ppf(probability + (1 - probability)/2)
+    return significance
+
+def significance_to_probability(significance, type="two-sided"):
+    '''
+    Transforms Z-score into p-value.
+
+    Returns the p-value for a given Z-score assuming a Gaussian distribution. One-sided and two-sided tails allowed.
+
+    Parameters:
+    -----------
+    Z-score : float or array of floats
+
+    Returns:
+    --------
+    p-value : float or array of floats
 
     Examples:
     ---------
@@ -92,50 +120,12 @@ def significance_to_probability(significance):
     >>>  significance_to_probability(3)                 #doctest: +SKIP
     0.9973002039367398
     '''
-    probability = special.ndtr(significance) - special.ndtr(-significance)
+    if type == "one-sided":
+        probability = norm.cdf(significance)
+    elif type == "two-sided":
+        #probability = norm.cdf(significance) - norm.cdf(-significance)
+        probability = norm.sf(-significance) - norm.sf(significance)
     return probability
-    
-def obj_probability_to_significance(significance, probability):
-    '''
-    Objective function for minimization in probability_to_significance.
-
-    Returns the squared difference between the input probability and the corresponding significance probability from significance_to_probabilty(significance).
-    '''
-    return (probability-significance_to_probability(significance))**2
-
-def probability_to_significance(probability):
-    '''
-    Transforms probability into significance.
-
-    Returns the probability (p-value) for a given significance assuming a Gaussian distribution. As there is no analytic formular for the reverse probability, we use scipy.optimize.minimize to minimize the objective function obj_probability_to_significance.
-
-    Parameters:
-    -----------
-    probability : float or array of floats
-    probability (p-value)
-
-    Returns:
-    --------
-    significances : float or array of floats
-    significance in multiples of the Gaussian standard deviation
-
-    See Also:
-    ---------
-    scipy.optimize.minimize
-    obj_probability_to_significance
-
-    Examples:
-    ---------
-    >>>  probability_to_significance(0.68)              #doctest: +SKIP
-    0.9944580078125
-    >>>  probability_to_significance(0.95)              #doctest: +SKIP
-    1.9599639892578145          
-    >>>  probability_to_significance(0.995)             #doctest: +SKIP
-    2.807033538818364
-    '''
-    res = minimize(obj_probability_to_significance, x0 = 1, args = (probability), method='Nelder-Mead', tol = 1E-6)
-    significance = float(res.x)
-    return significance
 
 def detection_probability(trigger_number_of_modules, signal_at_distance):
     '''

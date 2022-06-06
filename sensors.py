@@ -18,16 +18,6 @@ class Sensor(object):
     def signal_at_distance(self, distance, distance_0 = distance_0):
         return self.signal_events * (distance_0/distance)**2
 
-    def significance(self, distance, type = "poisson"):
-        s = self.signal_at_distance(distance)
-        b = self.background_events
-        n = s + b
-        if type == "poisson":
-            Z = np.sqrt(2*(n*np.log(n/b)-(n-b)))
-        elif type == "gauss":
-            Z = np.abs(n-s)/np.sqrt(b)
-        return Z
-
 class MDOM(Sensor):
     def __init__(self, name, trigger_number_of_PMTs, trigger_number_of_modules, sensor_type = 'mDOM', update_type = 'Gen2', SN_type = 'heavy', noise_type = None):
         super().__init__(name, sensor_type, update_type, SN_type, noise_type)
@@ -46,6 +36,18 @@ class MDOM(Sensor):
     def false_detection_probability(self):
         return false_detection_probability(self.trigger_number_of_modules, self.background_events)
     
+    # def significance(self, distance):
+    #     return probability_to_significance(self.detection_probability(distance))
+    def significance(self, distance, type = "poisson"):
+        s = self.signal_at_distance(distance)
+        b = self.background_events
+        n = s + b
+        if type == "poisson":
+            significance = np.sqrt(2*(n*np.log(n/b)-(n-b)))
+        elif type == "gauss":
+            significance = np.abs(n-b)/np.sqrt(b)
+        return significance
+
     def false_alarm_rate(self):
         return self.false_detection_probability()*year*self.noise_rate
 
@@ -76,8 +78,17 @@ class WLS(Sensor):
         return significance_to_probability(self.significance(distance))
 
     def false_detection_probability(self):
-        #return globals.DES_false_alarm_rate_wls/(year*self.noise_rate)
-        return np.sqrt(globals.DES_false_alarm_rate_comb)/(year*self.noise_rate)
+        return globals.DES_false_alarm_rate_WLS/(year*self.noise_rate)
+
+    def significance(self, distance, type = "gauss"):
+        s = self.signal_at_distance(distance)
+        b = self.background_events
+        n = s + b
+        if type == "poisson":
+            significance = np.sqrt(2*(n*np.log(n/b)-(n-b)))
+        elif type == "gauss":
+            significance = np.abs(n-b)/np.sqrt(b)
+        return significance
 
     def false_alarm_rate(self):
         return self.false_detection_probability()*year*self.noise_rate
@@ -144,8 +155,8 @@ class OR(object):
         self.WLS = wls 
 
     def significance(self, distance):
-        #return stouffer([self.MDOM.significance(distance), self.WLS.significance(distance)], [1,1])
-        return stouffer([self.MDOM.significance(distance), 0], [1,0])
+        return stouffer([self.MDOM.significance(distance), self.WLS.significance(distance)], [1,1])
+        #return stouffer([self.MDOM.significance(distance), 0], [1,0])
 
     def detection_probability(self, distance):
         return significance_to_probability(self.significance(distance))
